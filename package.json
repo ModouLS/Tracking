@@ -2,6 +2,9 @@
   "name": "kinsing-tracking",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "description": "KINSING multi-carrier shipment tracking system (DPD + Lufthansa Cargo)",
   "scripts": {
     "dev": "next dev -p 3000",
