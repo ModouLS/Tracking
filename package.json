@@ -6,9 +6,6 @@
     "node": ">=20.9.0"
   },
   "description": "KINSING multi-carrier shipment tracking system (DPD + Lufthansa Cargo)",
-  "engines": {
-    "node": ">=20.9.0"
-  },
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build",
