@@ -1,0 +1,127 @@
+<!-- =========================================================
+     KINSING Tracking Widget — paste this into a WordPress
+     "Custom HTML" block on the /track/ page.
+
+     After deploying to Railway, replace the TRACKING_API_URL
+     below with your actual Railway / subdomain URL.
+     ========================================================= -->
+
+<div id="kinsing-tracker">
+  <style>
+    #kinsing-tracker{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;max-width:720px;margin:48px auto;padding:0 16px}
+    #kinsing-tracker h2{font-size:1.6rem;font-weight:700;color:#1a2e4a;margin:0 0 8px}
+    #kinsing-tracker p.sub{color:#555;margin:0 0 28px;font-size:.95rem}
+    #kt-form{display:flex;gap:10px;flex-wrap:wrap}
+    #kt-input{flex:1 1 240px;padding:14px 16px;border:2px solid #ddd;border-radius:8px;font-size:1rem;outline:none;transition:border .2s}
+    #kt-input:focus{border-color:#f5d800}
+    #kt-btn{padding:14px 28px;background:#f5d800;border:none;border-radius:8px;font-size:1rem;font-weight:700;color:#1a2e4a;cursor:pointer;white-space:nowrap;transition:background .2s}
+    #kt-btn:hover{background:#e0c600}
+    #kt-btn:disabled{opacity:.6;cursor:wait}
+    #kt-result{margin-top:32px}
+    .kt-error{background:#fff3f3;border-left:4px solid #e53935;padding:16px;border-radius:8px;color:#b71c1c;font-size:.95rem}
+    .kt-card{border:1px solid #e8e8e8;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+    .kt-card-header{background:#1a2e4a;color:#fff;padding:20px 24px}
+    .kt-card-header h3{margin:0 0 4px;font-size:1.25rem}
+    .kt-card-header .kt-status-badge{display:inline-block;background:#f5d800;color:#1a2e4a;padding:4px 12px;border-radius:20px;font-size:.8rem;font-weight:700;margin-top:8px}
+    .kt-card-body{padding:24px}
+    .kt-meta{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-bottom:24px}
+    .kt-meta-item label{display:block;font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#888;margin-bottom:3px}
+    .kt-meta-item span{font-size:.95rem;color:#1a2e4a;font-weight:500}
+    .kt-divider{border:none;border-top:1px solid #eee;margin:20px 0}
+    .kt-timeline h4{font-size:.85rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin:0 0 16px}
+    .kt-steps{list-style:none;padding:0;margin:0}
+    .kt-step{display:flex;gap:12px;align-items:flex-start;margin-bottom:14px}
+    .kt-dot{width:14px;height:14px;border-radius:50%;background:#ddd;flex-shrink:0;margin-top:3px;border:3px solid #fff;box-shadow:0 0 0 2px #ddd}
+    .kt-dot.reached{background:#1a2e4a;box-shadow:0 0 0 2px #1a2e4a}
+    .kt-dot.current{background:#f5d800;box-shadow:0 0 0 2px #f5d800}
+    .kt-step-info{flex:1}
+    .kt-step-info strong{display:block;font-size:.9rem;color:#1a2e4a}
+    .kt-step-info time{font-size:.8rem;color:#888}
+    .kt-progress{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:24px}
+    .kt-prog-step{text-align:center;font-size:.7rem;color:#aaa;flex:1;min-width:60px}
+    .kt-prog-step.reached{color:#1a2e4a;font-weight:600}
+    .kt-prog-step.current{color:#b8a000;font-weight:700}
+    .kt-prog-dot{width:10px;height:10px;border-radius:50%;background:#ddd;margin:0 auto 4px}
+    .kt-prog-step.reached .kt-prog-dot{background:#1a2e4a}
+    .kt-prog-step.current .kt-prog-dot{background:#f5d800;box-shadow:0 0 0 3px #f5d80040}
+    @media(max-width:480px){#kt-form{flex-direction:column}#kt-btn{width:100%}}
+  </style>
+
+  <h2>Sendung verfolgen</h2>
+  <p class="sub">Gib deine KINSING-Sendungsnummer ein (z.B. KIN-26-A7X9P2)</p>
+
+  <div id="kt-form">
+    <input id="kt-input" type="text" placeholder="KIN-26-XXXXXX" autocomplete="off" spellcheck="false" />
+    <button id="kt-btn" onclick="ktSearch()">Verfolgen</button>
+  </div>
+
+  <div id="kt-result"></div>
+</div>
+
+<script>
+(function(){
+  // ▼ Change this to your Railway URL once deployed
+  var API = "https://tracking.kinsing.de/api/track";
+
+  window.ktSearch = function(){
+    var code = document.getElementById("kt-input").value.trim().toUpperCase();
+    var btn  = document.getElementById("kt-btn");
+    var out  = document.getElementById("kt-result");
+    if(!code){ out.innerHTML = '<div class="kt-error">Bitte gib eine Sendungsnummer ein.</div>'; return; }
+    btn.disabled = true; btn.textContent = "Suche…";
+    out.innerHTML = "";
+    fetch(API + "?code=" + encodeURIComponent(code))
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        btn.disabled = false; btn.textContent = "Verfolgen";
+        if(d.error){ out.innerHTML = '<div class="kt-error">'+escHtml(d.error)+'</div>'; return; }
+        out.innerHTML = renderShipment(d.shipment);
+      })
+      .catch(function(){
+        btn.disabled = false; btn.textContent = "Verfolgen";
+        out.innerHTML = '<div class="kt-error">Verbindungsfehler. Bitte versuche es später erneut oder kontaktiere uns unter <a href="mailto:support@kinsing.de">support@kinsing.de</a>.</div>';
+      });
+  };
+
+  document.getElementById("kt-input").addEventListener("keydown", function(e){
+    if(e.key === "Enter") window.ktSearch();
+  });
+
+  function escHtml(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+  function renderShipment(s){
+    var timelineRows = (s.timeline||[]).map(function(t){
+      return '<li class="kt-step">'
+        +'<span class="kt-dot reached"></span>'
+        +'<div class="kt-step-info"><strong>'+escHtml(t.label)+'</strong>'
+        +(t.time?'<time>'+escHtml(t.time)+'</time>':'')
+        +'</div></li>';
+    }).join("");
+
+    var progressSteps = (s.progress||[]).map(function(p){
+      var cls = p.current?"current":p.reached?"reached":"";
+      return '<div class="kt-prog-step '+cls+'"><div class="kt-prog-dot"></div>'+escHtml(p.label)+'</div>';
+    }).join("");
+
+    return '<div class="kt-card">'
+      +'<div class="kt-card-header">'
+      +'<h3>'+escHtml(s.trackingNumber)+'</h3>'
+      +'<span class="kt-status-badge">'+escHtml(s.currentStatusLabel)+'</span>'
+      +'</div>'
+      +'<div class="kt-card-body">'
+      +'<div class="kt-meta">'
+      +'<div class="kt-meta-item"><label>Von</label><span>'+escHtml(s.origin)+'</span></div>'
+      +'<div class="kt-meta-item"><label>Nach</label><span>'+escHtml(s.destination)+'</span></div>'
+      +'<div class="kt-meta-item"><label>Empfänger</label><span>'+escHtml(s.receiver)+'</span></div>'
+      +'<div class="kt-meta-item"><label>Gewicht</label><span>'+escHtml(String(s.weightKg))+' kg · '+escHtml(String(s.pieces))+' Stk.</span></div>'
+      +(s.deliveryAddress?'<div class="kt-meta-item"><label>Lieferadresse</label><span>'+escHtml(s.deliveryAddress)+'</span></div>':'')
+      +'<div class="kt-meta-item"><label>Letztes Update</label><span>'+escHtml(s.lastUpdate)+'</span></div>'
+      +(s.nextMilestone?'<div class="kt-meta-item"><label>Nächster Schritt</label><span>'+escHtml(s.nextMilestone)+'</span></div>':'')
+      +'</div>'
+      +(progressSteps?'<div class="kt-progress">'+progressSteps+'</div>':'')
+      +'<hr class="kt-divider">'
+      +'<div class="kt-timeline"><h4>Verlauf</h4><ul class="kt-steps">'+timelineRows+'</ul></div>'
+      +'</div></div>';
+  }
+})();
+</script>
